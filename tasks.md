@@ -7,8 +7,8 @@ This document outlines the development phases and tasks required to implement th
 ## Phase 1: Core Infrastructure (Signaling & QR)
 
 ### Task 1: Create basic Go signaling server
-- [ ] Set up a basic HTTP server that upgrades to WebSocket
-- [ ] Accept incoming WebSocket connections and assign client roles (mobile or desktop)
+- [x] Set up a basic HTTP server that upgrades to WebSocket
+- [x] Accept incoming WebSocket connections and assign client roles (mobile or desktop)
 - [ ] Build a message routing system based on sessionID and role
 - [ ] Define basic JSON input/output handling with decoding and validation
 
