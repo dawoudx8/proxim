@@ -12,7 +12,7 @@ This document outlines the development phases and tasks required to implement th
 > **Info:** Tasks 1–5 should be implemented using Go, and tasks 6-9 using Rust.
 
 ### Task 1: Create basic Go signaling server
-- [ ] Set up a basic HTTP server that upgrades to WebSocket 
+- [x] Set up a basic HTTP server that upgrades to WebSocket 
 - [ ] Accept incoming WebSocket connections and assign client roles (mobile or desktop)
 - [ ] Build a message routing system based on sessionID and role 
 - [ ] Define basic JSON input/output handling with decoding and validation 
