@@ -13,7 +13,7 @@ This document outlines the development phases and tasks required to implement th
 
 ### Task 1: Create basic Go signaling server
 - [x] Set up a basic HTTP server that upgrades to WebSocket 
-- [ ] Accept incoming WebSocket connections and assign client roles (mobile or desktop)
+- [x] Accept incoming WebSocket connections and assign client roles (mobile or desktop)
 - [ ] Build a message routing system based on sessionID and role 
 - [ ] Define basic JSON input/output handling with decoding and validation 
 
