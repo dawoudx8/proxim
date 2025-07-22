@@ -7,8 +7,10 @@ import (
 )
 
 func main() {
+
 	log := minilog.New(true)
 
+	// WebSocket endpoint for desktop and mobile clients
 	http.HandleFunc("/ws", ws.HandleWebSocket)
 	log.Info("Server started on port 8080")
 

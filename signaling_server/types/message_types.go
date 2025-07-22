@@ -10,6 +10,7 @@ type PairRequest struct {
 	SessionID  string     `json:"sessionID"`
 	DeviceInfo DeviceInfo `json:"deviceInfo"`
 }
+
 type DeviceInfo struct {
 	Name string `json:"name"`
 	ID   string `json:"id"`
@@ -31,4 +32,11 @@ type PairResult struct {
 	Type      string `json:"type"`
 	SessionID string `json:"sessionID"`
 	Status    string `json:"status"` // "approved" or "rejected"
+}
+
+// Optional, placeholder for future WebRTC signaling
+type SignalMessage struct {
+	Type      string      `json:"type"`
+	SessionID string      `json:"sessionID"`
+	Payload   interface{} `json:"payload"` // can be offer/answer/ice
 }
