@@ -6,6 +6,7 @@ import (
 
 // DispatchMessage routes incoming messages to the appropriate handler.
 func DispatchMessage(role string, msg map[string]interface{}, conn *websocket.Conn, desktopConn *websocket.Conn, mobileConn *websocket.Conn) {
+
 	msgTypeRaw, ok := msg["type"]
 	if !ok {
 		log.Errorf("[%s] Message missing 'type' field", role)
@@ -20,7 +21,7 @@ func DispatchMessage(role string, msg map[string]interface{}, conn *websocket.Co
 
 	switch msgType {
 	case "pair_request":
-		handlePairRequest(msg, role, conn, desktopConn)
+		handlePairRequest(msg, role, mobileConn, desktopConn)
 
 	case "pair_response":
 		handlePairResponse(msg, role)

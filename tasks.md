@@ -15,7 +15,7 @@ This document outlines the development phases and tasks required to implement th
 - [x] Set up a basic HTTP server that upgrades to WebSocket 
 - [x] Accept incoming WebSocket connections and assign client roles (mobile or desktop)
 - [x] Build a message routing system based on sessionID and role 
-- [ ] Define basic JSON input/output handling with decoding and validation 
+- [x] Define basic JSON input/output handling with decoding and validation 
 
 ### Task 2: Define signaling message types and schema 
 - [ ] Create Go structs for each message type: `pair_request`, `pair_prompt`, `pair_response`, `pair_result`, `signal`

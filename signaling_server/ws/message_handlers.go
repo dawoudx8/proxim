@@ -1,128 +1,119 @@
 package ws
 
 import (
+	"encoding/json"
+
 	"github.com/gorilla/websocket"
 	"server/session"
 	"server/types"
 )
 
-// handlePairRequest processes an incoming pair_request from a mobile client.
-func handlePairRequest(msg map[string]interface{}, role string, mobileConn, desktopConn *websocket.Conn) {
-
+func handlePairRequest(raw map[string]interface{}, role string, mobileConn, desktopConn *websocket.Conn) {
 	if role != "mobile" {
 		log.Errorf("[%s] Only mobile clients can send pair_request", role)
 		return
 	}
 
-	sessionID, ok := msg["sessionID"].(string)
-	if !ok || sessionID == "" {
-		log.Error("Missing or invalid 'sessionID' in pair_request")
+	var msg types.PairRequest
+	if err := mapToStruct(raw, &msg); err != nil {
+		log.Errorf("Failed to decode pair_request: %v", err)
 		return
 	}
 
-	deviceInfoRaw, ok := msg["deviceInfo"].(map[string]interface{})
-	if !ok {
-		log.Error("Missing or invalid 'deviceInfo' in pair_request")
+	if msg.SessionID == "" {
+		log.Error("Missing sessionID in pair_request")
 		return
 	}
 
-	name, _ := deviceInfoRaw["name"].(string)
-	id, _ := deviceInfoRaw["id"].(string)
-
-	log.Infof("Pairing request received from device: %s (%s)", name, id)
+	log.Infof("Pairing request received from device: %s (%s)", msg.DeviceInfo.Name, msg.DeviceInfo.ID)
 
 	if desktopConn == nil {
 		log.Error("No desktop connected — cannot forward pair_request")
 		return
 	}
 
-	// Store session
-	session.Create(sessionID, session.Session{
-		SessionID:  sessionID,
+	session.Create(msg.SessionID, session.Session{
+		SessionID:  msg.SessionID,
 		MobileConn: mobileConn,
-		DeviceInfo: types.DeviceInfo{
-			Name: name,
-			ID:   id,
-		},
+		DeviceInfo: msg.DeviceInfo,
 	})
 
-	// Send prompt to desktop
-	prompt := map[string]interface{}{
-		"type":       "pair_prompt",
-		"sessionID":  sessionID,
-		"deviceInfo": deviceInfoRaw,
+	prompt := types.PairPrompt{
+		Type:       "pair_prompt",
+		SessionID:  msg.SessionID,
+		DeviceInfo: msg.DeviceInfo,
 	}
 
-	err := desktopConn.WriteJSON(prompt)
-	if err != nil {
+	if err := desktopConn.WriteJSON(prompt); err != nil {
 		log.Errorf("Failed to send pair_prompt to desktop: %v", err)
 	}
 }
 
-// handlePairResponse processes the desktop's approval or rejection of the pair_request.
-func handlePairResponse(msg map[string]interface{}, role string) {
+func handlePairResponse(raw map[string]interface{}, role string) {
 	if role != "desktop" {
 		log.Errorf("[%s] Only desktop clients can send pair_response", role)
 		return
 	}
 
-	sessionID, ok := msg["sessionID"].(string)
-	if !ok || sessionID == "" {
-		log.Error("Missing or invalid 'sessionID' in pair_response")
+	var msg types.PairResponse
+	if err := mapToStruct(raw, &msg); err != nil {
+		log.Errorf("Failed to decode pair_response: %v", err)
 		return
 	}
 
-	approved, ok := msg["approved"].(bool)
-	if !ok {
-		log.Error("Missing or invalid 'approved' field in pair_response")
+	if msg.SessionID == "" {
+		log.Error("Missing sessionID in pair_response")
 		return
 	}
 
-	sess, exists := session.Get(sessionID)
+	sess, exists := session.Get(msg.SessionID)
 	if !exists || sess.MobileConn == nil {
 		log.Error("Session not found or no mobile connection to respond to")
 		return
 	}
 
-	if approved {
+	if msg.Approved {
 		log.Info("Desktop approved the connection request ✅")
 	} else {
 		log.Info("Desktop rejected the connection request ❌")
 	}
 
-	result := map[string]interface{}{
-		"type":      "pair_result",
-		"sessionID": sessionID,
-		"status":    "rejected",
+	result := types.PairResult{
+		Type:      "pair_result",
+		SessionID: msg.SessionID,
+		Status:    "rejected",
 	}
-	if approved {
-		result["status"] = "approved"
+	if msg.Approved {
+		result.Status = "approved"
 	}
 
-	err := sess.MobileConn.WriteJSON(result)
-	if err != nil {
+	if err := sess.MobileConn.WriteJSON(result); err != nil {
 		log.Errorf("Failed to send pair_result to mobile: %v", err)
 	}
 }
 
-// handleSignalMessage forwards a WebRTC signaling message to the other peer.
-func handleSignalMessage(msg map[string]interface{}, senderConn *websocket.Conn, senderRole string) {
-	sessionID, ok := msg["sessionID"].(string)
-	if !ok || sessionID == "" {
-		log.Error("Missing or invalid 'sessionID' in signal message")
+func handleSignalMessage(raw map[string]interface{}, senderConn *websocket.Conn, senderRole string) {
+	var msg types.SignalMessage
+	if err := mapToStruct(raw, &msg); err != nil {
+		log.Errorf("Failed to decode signal message: %v", err)
 		return
 	}
 
-	sess, exists := session.Get(sessionID)
+	if msg.SessionID == "" {
+		log.Error("Missing sessionID in signal message")
+		return
+	}
+
+	sess, exists := session.Get(msg.SessionID)
 	if !exists {
-		log.Errorf("[%s] Session not found for signaling: %s", senderRole, sessionID)
+		log.Errorf("[%s] Session not found for signaling: %s", senderRole, msg.SessionID)
 		return
 	}
 
 	var targetConn *websocket.Conn
 	if senderRole == "mobile" {
 		targetConn = sess.DesktopConn
-	} else if senderRole == "desktop" {
+	} else {
 		targetConn = sess.MobileConn
 	}
 
@@ -131,8 +122,14 @@ func handleSignalMessage(msg map[string]interface{}, senderConn *websocket.Conn,
 		return
 	}
 
-	err := targetConn.WriteJSON(msg)
-	if err != nil {
+	if err := targetConn.WriteJSON(msg); err != nil {
 		log.Errorf("[%s] Failed to forward signaling message: %v", senderRole, err)
 	}
+}
+func mapToStruct(m map[string]interface{}, out interface{}) error {
+	bytes, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(bytes, out)
 }
